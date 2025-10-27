@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🧪 Liquid Sorting Visualizer</title>
+<style>
+  body { 
+    background:#111; 
+    color:#eee; 
+    text-align:center; 
+    font-family:sans-serif;
+  }
+  canvas { 
+    background:#222; 
+    margin-top:20px; 
+    border-radius:10px; 
+    box-shadow:0 0 20px #000 inset;
+  }
+  button { 
+    margin: 10px; 
+    padding: 10px 20px; 
+    font-size: 14px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    border:none;
+    background:#3498db; 
+    color:white;
+  }
+  button:hover {
+    background:#2980b9;
+  }
+</style>
+</head>
+<body>
+<h2>🧪 Liquid Sorting Visualizer</h2>
+<canvas id="board" width="800" height="450"></canvas>
+<div>
+  <button id="startBtn">▶️ Start</button>
+  <button id="resetBtn">🔁 Reset</button>
+</div>
+
+<!-- 🔧 встроенный решатель A* -->
+<script>
+function heuristic(tubes){return tubes.reduce((a,t)=>a+(t.length>0&&new Set(t).size>1?1:0),0);}
+function canPour(f,t,T,c){if(f===t||T[f].length===0||T[t].length===c)return false;
+  const ft=T[f][T[f].length-1],tt=T[t][T[t].length-1];return !tt||tt===ft;}
+function pour(f,t,T,c){const n=T.map(x=>x.slice()),ft=n[f][n[f].length-1];
+  while(n[f].length>0&&n[f][n[f].length-1]===ft&&n[t].length<c)n[t].push(n[f].pop());
+  return n;}
+function isSolved(T,c){return T.every(t=>t.length===0||(t.length===c&&t.every(x=>x===t[0])));}
+function serialize(T){return JSON.stringify(T);}
+function solveAStar(initial,capacity){
+  const seen=new Set(),queue=[{tubes:initial,path:[],g:0,h:heuristic(initial)}];
+  while(queue.length){
+    queue.sort((a,b)=>a.g+a.h-(b.g+b.h));
+    const {tubes,path,g}=queue.shift();const key=serialize(tubes);
+    if(seen.has(key))continue;seen.add(key);
+    if(isSolved(tubes,capacity))return path;
+    for(let i=0;i<tubes.length;i++)for(let j=0;j<tubes.length;j++)
+      if(canPour(i,j,tubes,capacity)){
+        const ns=pour(i,j,tubes,capacity);
+        queue.push({tubes:ns,path:[...path,[i,j]],g:g+1,h:heuristic(ns)});
+      }
+  }return null;
+}
+</script>
+
+<!-- 🎨 визуализатор -->
+<script>
+const tubes = [
+  ['R','G','B','G'],
+  ['B','G','R','R'],
+  ['G','B','R','B'],
+  [],
+  []
+];
+const capacity = 4;
+let moves = [];
+let step = 0;
+let state = tubes.map(t=>t.slice());
+const ctx = document.getElementById('board').getContext('2d');
+const colors = { 
+  R:'#e74c3c', 
+  G:'#2ecc71', 
+  B:'#3498db', 
+  Y:'#f1c40f', 
+  P:'#9b59b6', 
+  O:'#e67e22' 
+};
+
+function drawTubes(state) {
+  ctx.clearRect(0,0,800,450);
+  state.forEach((tube, i)=>{
+    const x = 100 + i*130;
+    ctx.strokeStyle='#ccc';
+    ctx.lineWidth=2;
+    ctx.strokeRect(x,100,60,capacity*30);
+    for(let j=0;j<tube.length;j++){
+      const color = colors[tube[j]] || '#888';
+      const y = 100 + (capacity - j - 1)*30;
+      ctx.fillStyle = color;
+      ctx.fillRect(x+2, y, 56, 26);
+    }
+    ctx.fillStyle='#fff';
+    ctx.font='14px monospace';
+    ctx.fillText(`Tube ${i}`, x+4, 100 + capacity*30 + 20);
+  });
+}
+
+async function pourAnimated(from,to){
+  const fromX = 100 + from*130 + 30;
+  const toX = 100 + to*130 + 30;
+  const fromTop = 100 + (capacity - state[from].length)*30;
+  const color = colors[state[from][state[from].length-1]] || '#888';
+
+  for(let f=0; f<=1; f+=0.05){
+    drawTubes(state);
+    const midX = fromX + (toX - fromX)*f;
+    const midY = fromTop - 60*Math.sin(f*Math.PI);
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.arc(midX, midY, 10, 0, Math.PI*2);
+    ctx.fill();
+    await new Promise(r=>setTimeout(r,16));
+  }
+  const drop = state[from].pop();
+  state[to].push(drop);
+  drawTubes(state);
+}
+
+async function animate(){
+  if(step>=moves.length) {
+    document.getElementById('startBtn').disabled = false;
+    return;
+  }
+  const [f,t] = moves[step++];
+  await pourAnimated(f,t);
+  await new Promise(r=>setTimeout(r,400));
+  animate();
+}
+
+document.getElementById('startBtn').onclick = async ()=>{
+  step=0; state=tubes.map(t=>t.slice());
+  drawTubes(state);
+  document.getElementById('startBtn').disabled = true;
+  moves = solveAStar(state, capacity);
+  console.log("Calculated moves:", moves);
+  await new Promise(r=>setTimeout(r,800));
+  animate();
+};
+
+document.getElementById('resetBtn').onclick = ()=>{
+  step=0; state=tubes.map(t=>t.slice());
+  drawTubes(state);
+  document.getElementById('startBtn').disabled = false;
+};
+
+drawTubes(state);
+</script>
+</body>
+</html>
+

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast Service</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .search-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 1.1em;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #74b9ff;
+        }
+
+        .search-btn {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .weather-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .current-weather {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .temperature {
+            font-size: 4em;
+            font-weight: bold;
+            color: #2d3436;
+            margin: 20px 0;
+        }
+
+        .city-name {
+            font-size: 2em;
+            color: #636e72;
+            margin-bottom: 10px;
+        }
+
+        .coordinates {
+            color: #b2bec3;
+            font-size: 1.1em;
+        }
+
+        /* CHART STYLES */
+        .chart-container {
+            margin: 30px 0;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .chart-wrapper {
+            width: 100%;
+            height: 300px;
+            position: relative;
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            gap: 8px;
+            padding: 20px 0;
+            border-bottom: 2px solid #dfe6e9;
+        }
+
+        .chart-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+        }
+
+        .bar {
+            background: linear-gradient(to top, #74b9ff, #0984e3);
+            border-radius: 5px 5px 0 0;
+            width: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .bar:hover {
+            background: linear-gradient(to top, #fd79a8, #e84393);
+            transform: scale(1.05);
+        }
+
+        .bar-label {
+            font-size: 0.8em;
+            margin-top: 8px;
+            color: #636e72;
+            font-weight: 500;
+        }
+
+        .bar-value {
+            font-size: 0.75em;
+            margin-bottom: 5px;
+            color: #2d3436;
+            font-weight: bold;
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+
+        .chart-legend {
+            text-align: center;
+            margin-top: 15px;
+            color: #636e72;
+            font-size: 0.9em;
+        }
+
+        .chart-title {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #2d3436;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        /* END CHART STYLES */
+
+        .cache-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .hourly-forecast {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .hour-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+
+        .hour-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .hour-time {
+            font-weight: bold;
+            color: #2d3436;
+            margin-bottom: 5px;
+        }
+
+        .hour-temp {
+            font-size: 1.2em;
+            color: #e17055;
+            font-weight: bold;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .error-message {
+            background: #fab1a0;
+            color: #d63031;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .examples {
+            margin-top: 20px;
+        }
+
+        .example-btn {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 0 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .example-btn:hover {
+            background: white;
+            color: #0984e3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌤️ Weather Forecast</h1>
+            <p>Get real-time weather data and temperature charts for any city</p>
+            <div class="examples">
+                <p>Try: 
+                    <button class="example-btn" onclick="searchWeather('Moscow')">Moscow</button>
+                    <button class="example-btn" onclick="searchWeather('London')">London</button>
+                    <button class="example-btn" onclick="searchWeather('New York')">New York</button>
+                    <button class="example-btn" onclick="searchWeather('Tokyo')">Tokyo</button>
+                </p>
+            </div>
+        </div>
+
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" 
+                       class="search-input" 
+                       id="cityInput" 
+                       placeholder="Enter city name..."
+                       onkeypress="handleKeyPress(event)">
+                <button class="search-btn" onclick="searchWeather()">
+                    🔍 Get Weather
+                </button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading" style="display: none;">
+            ⏳ Loading weather data...
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="weather-card" id="weatherCard">
+            <div class="current-weather">
+                <h2 class="city-name" id="cityName"></h2>
+                <div class="coordinates" id="coordinates"></div>
+                <div class="temperature" id="currentTemp"></div>
+                <div class="cache-info" id="cacheInfo"></div>
+            </div>
+
+            <!-- CHART SECTION -->
+            <div class="chart-container">
+                <div class="chart-title">24-Hour Temperature Forecast</div>
+                <div class="chart-wrapper" id="temperatureChart">
+                    <!-- Chart will be generated here by JavaScript -->
+                </div>
+            </div>
+
+            <h3>Detailed Forecast (Every 3 Hours)</h3>
+            <div class="hourly-forecast" id="hourlyForecast"></div>
+        </div>
+    </div>
+
+    <script>
+        const cityInput = document.getElementById('cityInput');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const weatherCard = document.getElementById('weatherCard');
+        const cityName = document.getElementById('cityName');
+        const coordinates = document.getElementById('coordinates');
+        const currentTemp = document.getElementById('currentTemp');
+        const cacheInfo = document.getElementById('cacheInfo');
+        const temperatureChart = document.getElementById('temperatureChart');
+        const hourlyForecast = document.getElementById('hourlyForecast');
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                searchWeather();
+            }
+        }
+
+        // Function to generate temperature chart
+        // REPLACE the generateTemperatureChart function with this:
+	async function generateTemperatureChart(city) {
+	    try {
+		console.log('Fetching weather data for chart...');
+		const weatherResponse = await fetch(`/weather?city=${encodeURIComponent(city)}`);
+		const weatherData = await weatherResponse.json();
+		
+		console.log('Weather data received:', weatherData);
+		
+		if (!weatherData.hourly || !weatherData.hourly.temperature) {
+		    throw new Error('No temperature data available');
+		}
+
+		// Clear previous chart
+		temperatureChart.innerHTML = '';
+
+		const temperatures = weatherData.hourly.temperature;
+		const times = weatherData.hourly.time;
+		
+		console.log('Temperatures:', temperatures);
+		console.log('Times:', times);
+
+		// Calculate chart dimensions
+		const maxTemp = Math.max(...temperatures);
+		const minTemp = Math.min(...temperatures);
+		const chartHeight = 200;
+
+		console.log(`Min temp: ${minTemp}, Max temp: ${maxTemp}`);
+
+		// Create bars for each temperature point
+		temperatures.forEach((temp, index) => {
+		    if (index >= 24) return; // Only show 24 hours
+		    
+		    // Calculate bar height (normalize to chart height)
+		    const barHeight = ((temp - minTemp) / (maxTemp - minTemp || 1)) * chartHeight;
+		    
+		    // Format time (just show hour)
+		    const time = new Date(times[index]);
+		    const hour = time.getHours().toString().padStart(2, '0');
+		    
+		    const barContainer = document.createElement('div');
+		    barContainer.className = 'chart-bar';
+		    
+		    barContainer.innerHTML = `
+		        <div class="bar-value">${Math.round(temp)}°C</div>
+		        <div class="bar" style="height: ${barHeight}px"></div>
+		        <div class="bar-label">${hour}</div>
+		    `;
+		    
+		    temperatureChart.appendChild(barContainer);
+		});
+
+		// Add chart legend
+		const legend = document.createElement('div');
+		legend.className = 'chart-legend';
+		legend.innerHTML = `City: ${weatherData.city} | Min: ${Math.round(minTemp)}°C | Max: ${Math.round(maxTemp)}°C`;
+		temperatureChart.appendChild(legend);
+
+	    } catch (error) {
+		console.error('Chart generation error:', error);
+		temperatureChart.innerHTML = '<div style="text-align: center; color: #636e72; padding: 40px;">Error loading chart data. Check console for details.</div>';
+	    }
+	}
+
+        async function searchWeather(city = null) {
+            const searchCity = city || cityInput.value.trim();
+            
+            if (!searchCity) {
+                showError('Please enter a city name');
+                return;
+            }
+
+            // Reset UI
+            hideError();
+            weatherCard.style.display = 'none';
+            loading.style.display = 'block';
+
+            try {
+                // Fetch weather data
+                const weatherResponse = await fetch(`/weather?city=${encodeURIComponent(searchCity)}`);
+                const weatherData = await weatherResponse.json();
+
+                if (weatherData.error) {
+                    throw new Error(weatherData.error);
+                }
+
+                // Update UI with weather data
+                displayWeatherData(weatherData);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayWeatherData(data) {
+            cityName.textContent = data.city;
+            coordinates.textContent = `Lat: ${data.latitude.toFixed(4)}, Lon: ${data.longitude.toFixed(4)}`;
+            currentTemp.textContent = `${data.current.temperature}°C`;
+            
+            // Cache info
+            if (data.cached) {
+                cacheInfo.textContent = `✅ Served from cache (${data.cacheAge} seconds old)`;
+                cacheInfo.style.background = '#d4edda';
+                cacheInfo.style.color = '#155724';
+            } else {
+                cacheInfo.textContent = '🔄 Fresh data from API';
+                cacheInfo.style.background = '#d1ecf1';
+                cacheInfo.style.color = '#0c5460';
+            }
+
+            // Generate temperature chart
+            generateTemperatureChart(data.city);
+
+            // Hourly forecast
+            hourlyForecast.innerHTML = '';
+            for (let i = 0; i < 24; i += 3) { // Show every 3 hours
+                const time = new Date(data.hourly.time[i]).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+                const temp = data.hourly.temperature[i];
+
+                const hourItem = document.createElement('div');
+                hourItem.className = 'hour-item';
+                hourItem.innerHTML = `
+                    <div class="hour-time">${time}</div>
+                    <div class="hour-temp">${Math.round(temp)}°C</div>
+                `;
+                hourlyForecast.appendChild(hourItem);
+            }
+
+            weatherCard.style.display = 'block';
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        // Load example on page load
+        window.addEventListener('load', () => {
+            searchWeather('Moscow');
+        });
+    </script>
+</body>
+</html>
